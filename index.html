@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<!--
+  Hidden Words - find real words hidden in the letters of any text.
+  Copyright (C) 2026 Hidden Words contributors
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hidden Words — find words hidden in any text</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F7F9;
+    --ink:#16233A;
+    --azulejo:#2E5FA3;
+    --azulejo-deep:#1E4176;
+    --marigold:#D9A424;
+    --tile:#FFFFFF;
+    --tile-edge:#C9D4DE;
+    --muted:#6B7A8C;
+    --ok:#2F7D4F;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}
+  }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Source Sans 3",system-ui,sans-serif;
+    font-size:16px;
+    line-height:1.55;
+    min-height:100vh;
+  }
+  a{color:var(--azulejo)}
+
+  header{
+    border-bottom:3px solid var(--ink);
+    background:
+      linear-gradient(0deg, rgba(46,95,163,.06), rgba(46,95,163,.06)),
+      var(--paper);
+    padding:24px 20px 20px;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:0 4px}
+  .brand{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;justify-content:space-between}
+  h1{
+    font-family:"Fraunces",serif;
+    font-weight:900;
+    font-size:clamp(1.7rem,4.5vw,2.6rem);
+    letter-spacing:-.01em;
+  }
+  h1 .es{color:var(--azulejo)}
+  .tagline{color:var(--muted);font-size:.95rem;max-width:60ch;margin-top:4px}
+  .uilang{display:flex;align-items:center;gap:7px;font-size:.85rem;color:var(--muted)}
+
+  main{max-width:1060px;margin:0 auto;padding:26px 20px 130px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  @media (max-width:820px){.grid{grid-template-columns:1fr}}
+
+  section.card{
+    background:#fff;
+    border:1px solid var(--tile-edge);
+    border-radius:var(--radius);
+    padding:20px;
+    box-shadow:0 1px 0 var(--tile-edge);
+  }
+  h2{
+    font-family:"Fraunces",serif;
+    font-weight:600;
+    font-size:1.15rem;
+    margin-bottom:12px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  }
+  h2 .num{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.8rem;font-weight:600;
+    color:var(--azulejo);
+    border:1px solid var(--azulejo);
+    border-radius:6px;padding:1px 7px;
+  }
+
+  textarea{
+    width:100%;
+    min-height:140px;
+    resize:vertical;
+    font-family:"Fraunces",serif;
+    font-size:1.05rem;
+    line-height:1.6;
+    padding:12px 14px;
+    border:1px solid var(--tile-edge);
+    border-radius:var(--radius);
+    background:var(--paper);
+    color:var(--ink);
+  }
+  textarea:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
+    outline:3px solid var(--marigold);outline-offset:2px;
+  }
+
+  .controls{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;align-items:center}
+  label.opt{display:flex;align-items:center;gap:7px;font-size:.92rem;color:var(--ink)}
+  select{
+    font:inherit;padding:6px 10px;border-radius:8px;
+    border:1px solid var(--tile-edge);background:#fff;color:var(--ink);
+  }
+  button{
+    font:inherit;font-weight:700;cursor:pointer;
+    border-radius:var(--radius);
+    padding:9px 18px;border:2px solid var(--ink);
+    background:var(--ink);color:#fff;
+    transition:transform .08s ease, background .15s ease;
+  }
+  button:hover{background:var(--azulejo-deep);border-color:var(--azulejo-deep)}
+  button:active{transform:translateY(1px)}
+  button.ghost{background:#fff;color:var(--ink)}
+  button.ghost:hover{background:var(--paper)}
+  button.small{padding:5px 12px;font-size:.85rem;border-width:1.5px}
+  button:disabled{opacity:.45;cursor:not-allowed}
+
+  /* Signature: letterpress tile rack */
+  .rack{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .tile{
+    position:relative;
+    font-family:"IBM Plex Mono",monospace;
+    font-weight:600;font-size:1.05rem;
+    width:40px;height:44px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--tile);
+    border:1px solid var(--tile-edge);
+    border-bottom:3px solid var(--tile-edge);
+    border-radius:7px;
+    text-transform:uppercase;
+    transition:background .12s, border-color .12s, transform .12s;
+  }
+  .tile .cnt{
+    position:absolute;bottom:2px;right:4px;
+    font-size:.58rem;color:var(--muted);font-weight:400;
+  }
+  .tile.lit{
+    background:var(--azulejo);
+    border-color:var(--azulejo-deep);
+    color:#fff;
+    transform:translateY(-2px);
+  }
+  .tile.lit .cnt{color:#cfe0f5}
+  .rack-empty{color:var(--muted);font-size:.92rem}
+
+  .results{margin-top:4px}
+  .word-list{list-style:none;display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto;padding-right:4px}
+  .word-item{
+    display:flex;align-items:center;gap:12px;
+    border:1px solid var(--tile-edge);
+    border-radius:var(--radius);
+    padding:9px 12px;
+    background:#fff;
+  }
+  .word-item .w{
+    font-family:"Fraunces",serif;
+    font-weight:600;font-size:1.12rem;
+    text-transform:uppercase;letter-spacing:.03em;
+  }
+  .word-item .tr{color:var(--muted);font-size:.92rem;flex:1}
+  .word-item button{margin-left:auto;white-space:nowrap}
+  .word-item.picked{border-color:var(--ok)}
+  .word-item.picked .w{color:var(--ok)}
+
+  .hint{color:var(--muted);font-size:.88rem;margin-top:10px}
+  .filterbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+  .filterbar input{
+    font:inherit;padding:6px 10px;border-radius:8px;flex:1;min-width:140px;
+    border:1px solid var(--tile-edge);background:var(--paper);color:var(--ink);
+  }
+
+  /* Collection bar */
+  .collection{
+    position:fixed;left:0;right:0;bottom:0;
+    background:var(--ink);color:#fff;
+    border-top:3px solid var(--marigold);
+    padding:12px 20px;
+    z-index:10;
+  }
+  .collection .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .collection h3{
+    font-family:"Fraunces",serif;font-weight:600;font-size:1rem;white-space:nowrap;
+  }
+  .chips{display:flex;gap:8px;flex-wrap:wrap;flex:1;max-height:84px;overflow:auto}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    background:#243550;border:1px solid #3a4f73;
+    border-radius:999px;padding:4px 6px 4px 12px;
+    font-size:.9rem;
+  }
+  .chip .n{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--marigold)}
+  .chip b{text-transform:uppercase;font-weight:600;letter-spacing:.03em}
+  .chip .lg{font-size:.7rem;color:#9db2d1;text-transform:uppercase}
+  .chip button{
+    border:none;background:transparent;color:#9db2d1;padding:0 6px;font-size:1rem;font-weight:400;
+  }
+  .chip button:hover{color:#fff;background:transparent}
+  .collection .empty{color:#9db2d1;font-size:.9rem}
+
+  /* Proverb dialog */
+  dialog{
+    border:2px solid var(--ink);border-radius:14px;
+    max-width:560px;width:calc(100% - 40px);
+    padding:26px;background:#fff;color:var(--ink);
+  }
+  dialog::backdrop{background:rgba(22,35,58,.55)}
+  dialog h2{margin-bottom:14px}
+  .refran{
+    font-family:"Fraunces",serif;font-size:1.3rem;font-weight:600;
+    border-left:4px solid var(--marigold);
+    padding:10px 16px;margin:14px 0;
+    background:var(--paper);border-radius:0 var(--radius) var(--radius) 0;
+  }
+  .refran small{display:block;font-family:"Source Sans 3",sans-serif;font-weight:400;font-size:.85rem;color:var(--muted);margin-top:6px}
+  .dialog-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center}
+  .dialog-actions label{font-size:.9rem;color:var(--muted);display:flex;gap:6px;align-items:center}
+
+  footer{
+    max-width:1060px;margin:40px auto 0;padding:0 20px;
+    color:var(--muted);font-size:.85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1>Hidden <span class="es">Words</span></h1>
+      <label class="uilang"><span data-i18n="uiLang">Interface</span>
+        <select id="uiLang" aria-label="Interface language">
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+          <option value="es">Español</option>
+        </select>
+      </label>
+    </div>
+    <p class="tagline" data-i18n="tagline"></p>
+  </div>
+</header>
+
+<main>
+  <div class="grid">
+
+    <!-- INPUT -->
+    <section class="card">
+      <h2><span class="num" id="poemNum"></span> <span data-i18n="poemText"></span></h2>
+      <textarea id="poemText" placeholder="Á dormir va la rosa&#10;De los rosales;&#10;A dormir va mi niño,&#10;Porque ya es tarde." aria-label="Poem text"></textarea>
+
+      <div class="controls">
+        <label class="opt"><span data-i18n="wordLang"></span>
+          <select id="lang">
+            <option value="en" selected>English</option>
+            <option value="ru">Русский</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+            <option value="pt">Português</option>
+          </select>
+        </label>
+        <label class="opt"><span data-i18n="mode"></span>
+          <select id="mode">
+            <option value="presence" data-i18n="modeFree" selected></option>
+            <option value="strict" data-i18n="modeStrict"></option>
+          </select>
+        </label>
+        <button id="analyze" data-i18n="analyze"></button>
+      </div>
+
+      <h2 style="margin-top:22px" data-i18n="lettersHead"></h2>
+      <div class="rack" id="rack"><span class="rack-empty" data-i18n="rackEmpty"></span></div>
+      <p class="hint" data-i18n="hoverHint"></p>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="card results">
+      <h2><span data-i18n="foundHead"></span> <span class="num" id="foundCount">0</span></h2>
+      <div class="filterbar">
+        <input id="filter" type="search" aria-label="Filter words">
+        <label class="opt"><span data-i18n="minLen"></span>
+          <select id="minLen">
+            <option>3</option><option selected>4</option><option>5</option><option>6</option>
+          </select>
+        </label>
+      </div>
+      <ul class="word-list" id="words"></ul>
+      <p class="hint" id="resultsHint"></p>
+    </section>
+
+  </div>
+</main>
+
+<!-- COLLECTION -->
+<div class="collection" role="region" aria-label="Word collection">
+  <div class="wrap">
+    <h3 data-i18n="collection"></h3>
+    <div class="chips" id="chips"></div>
+    <button class="small ghost" id="exportBtn" style="border-color:#fff;color:#fff" disabled data-i18n="export"></button>
+    <button class="small" id="proverbBtn" style="background:var(--marigold);border-color:var(--marigold);color:var(--ink)" disabled data-i18n="proverb"></button>
+  </div>
+</div>
+
+<!-- PROVERB DIALOG -->
+<dialog id="proverbDialog">
+  <h2 data-i18n="proverbTitle"></h2>
+  <p><span data-i18n="proverbWordsLabel"></span> <b id="proverbWords"></b></p>
+  <div class="refran" id="refranBox"></div>
+  <div class="dialog-actions">
+    <label><span data-i18n="proverbLang"></span>
+      <select id="proverbLang"></select>
+    </label>
+    <button id="anotherProverb" data-i18n="another"></button>
+    <button class="ghost" id="closeDialog" data-i18n="close"></button>
+  </div>
+</dialog>
+
+<footer>
+  <p data-i18n="footer"></p>
+</footer>
+
+<script>
+"use strict";
+
+/* ============================================================
+   0. UI I18N
+   ============================================================ */
+const I18N = {
+en:{
+  uiLang:"Interface",
+  tagline:"Paste any text — a poem, a song, a quote, a letter, or just a paragraph. Hidden Words gathers all its letters (ignoring spaces, punctuation and case) and shows which real words are hidden inside. Collect one word from each text, and at the end turn your collection into a proverb or a saying. Cyrillic ⇄ Latin transliteration is automatic.",
+  poemText:"Your text", wordLang:"Word language:", mode:"Mode:",
+  modeFree:"free (letter presence)", modeStrict:"strict (letter counts)",
+  analyze:"Analyze text", lettersHead:"Letters of the text",
+  rackEmpty:"Letter tiles will appear here after analysis.",
+  hoverHint:"Hover over a found word to light up the tiles it is built from.",
+  foundHead:"Words found", minLen:"Min length:",
+  filterPh:"Filter by word or meaning…",
+  hintStart:"Press “Analyze text” to see words. “Add” stores a word with the current text number.",
+  hintNone:"No dictionary words matched — try free mode or a smaller length.",
+  hintAdded:"“Add” stores the word with the current text number; the counter advances for the next text.",
+  hintEmptyText:"Paste a text first.",
+  collection:"Collection", collectionEmpty:"Empty so far — add words from the results.",
+  export:"Export", proverb:"Make a proverb", proverbTitle:"A proverb from your collection",
+  proverbWordsLabel:"Words:", proverbLang:"Language:", another:"Another one", close:"Close",
+  add:"Add", added:"Added ✓", inPoem:"Text",
+  proverbNeed:"You need at least two words of one language in the collection",
+  footer:"Single HTML file, no dependencies — ready for GitHub Pages. Dictionaries are built in (see the LANGS object) and easy to extend: just add [\"word\",\"gloss\"] pairs. Translations are shown only when the word language differs from the interface language."
+},
+ru:{
+  uiLang:"Интерфейс",
+  tagline:"Вставьте любой текст — стихотворение, песню, цитату, письмо или просто абзац. Hidden Words соберёт все его буквы (без пробелов, знаков и регистра) и покажет, какие осмысленные слова в нём спрятаны. Собирайте по слову из каждого текста, а в конце превратите копилку в поговорку или пословицу. Транслитерация кириллица ⇄ латиница — автоматически.",
+  poemText:"Ваш текст", wordLang:"Язык слов:", mode:"Режим:",
+  modeFree:"свободный (наличие букв)", modeStrict:"строгий (учёт количества)",
+  analyze:"Разобрать текст", lettersHead:"Буквы текста",
+  rackEmpty:"Здесь появятся буквы-плашки после разбора.",
+  hoverHint:"Наведите курсор на найденное слово — подсветятся буквы, из которых оно собрано.",
+  foundHead:"Найденные слова", minLen:"Мин. длина:",
+  filterPh:"Фильтр по слову или переводу…",
+  hintStart:"Нажмите «Разобрать текст», чтобы увидеть слова. «В копилку» сохраняет слово с номером текущего текста.",
+  hintNone:"Подходящих слов не нашлось — попробуйте свободный режим или меньшую длину.",
+  hintAdded:"«В копилку» сохраняет слово с номером текущего текста; счётчик перейдёт к следующему тексту.",
+  hintEmptyText:"Сначала вставьте текст.",
+  collection:"Копилка", collectionEmpty:"Пока пусто — добавьте слова из результатов.",
+  export:"Экспорт", proverb:"Составить поговорку", proverbTitle:"Поговорка из копилки",
+  proverbWordsLabel:"Слова:", proverbLang:"Язык:", another:"Другой вариант", close:"Закрыть",
+  add:"В копилку", added:"В копилке ✓", inPoem:"Текст",
+  proverbNeed:"Нужно минимум два слова одного языка в копилке",
+  footer:"Один HTML-файл без зависимостей — готов для GitHub Pages. Словари встроены (объект LANGS), расширяются парами [\"слово\",\"перевод\"]. Переводы показываются, только если язык слов отличается от языка интерфейса."
+},
+es:{
+  uiLang:"Interfaz",
+  tagline:"Pega cualquier texto: un poema, una canción, una cita, una carta o un simple párrafo. Hidden Words reúne todas sus letras (sin espacios, signos ni mayúsculas) y muestra qué palabras reales se esconden dentro. Reúne una palabra de cada texto y, al final, convierte tu colección en un refrán o dicho. Transliteración cirílico ⇄ latino automática.",
+  poemText:"Tu texto", wordLang:"Idioma de las palabras:", mode:"Modo:",
+  modeFree:"libre (presencia de letras)", modeStrict:"estricto (cuenta de letras)",
+  analyze:"Analizar texto", lettersHead:"Letras del texto",
+  rackEmpty:"Las fichas de letras aparecerán aquí tras el análisis.",
+  hoverHint:"Pasa el cursor sobre una palabra para iluminar las fichas que la forman.",
+  foundHead:"Palabras encontradas", minLen:"Longitud mín.:",
+  filterPh:"Filtrar por palabra o significado…",
+  hintStart:"Pulsa «Analizar texto» para ver palabras. «Añadir» guarda la palabra con el número del texto actual.",
+  hintNone:"No hay palabras del diccionario que coincidan: prueba el modo libre o una longitud menor.",
+  hintAdded:"«Añadir» guarda la palabra con el número del texto actual; el contador avanza al siguiente texto.",
+  hintEmptyText:"Primero pega un texto.",
+  collection:"Colección", collectionEmpty:"Vacía por ahora: añade palabras de los resultados.",
+  export:"Exportar", proverb:"Crear un refrán", proverbTitle:"Un refrán de tu colección",
+  proverbWordsLabel:"Palabras:", proverbLang:"Idioma:", another:"Otro", close:"Cerrar",
+  add:"Añadir", added:"Añadida ✓", inPoem:"Texto",
+  proverbNeed:"Necesitas al menos dos palabras de un mismo idioma",
+  footer:"Un solo archivo HTML, sin dependencias: listo para GitHub Pages. Los diccionarios están integrados (objeto LANGS) y se amplían con pares [\"palabra\",\"glosa\"]. Las traducciones solo se muestran cuando el idioma de las palabras difiere del idioma de la interfaz."
+}
+};
+
+/* ============================================================
+   1. LANGUAGES: alphabets, dictionaries, proverb templates
+   Gloss format: "english / русский" (EN words glossed in RU,
+   RU words glossed in EN). Extend freely.
+   ============================================================ */
+const RU2LAT = {
+"а":"a","б":"b","в":"v","г":"g","д":"d","е":"e","ё":"e","ж":"zh","з":"z","и":"i","й":"y",
+"к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f",
+"х":"j","ц":"ts","ч":"ch","ш":"sh","щ":"sh","ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya"
+};
+const LAT2CYR = {
+"a":"а","b":"б","c":"к","d":"д","e":"е","f":"ф","g":"г","h":"х","i":"и","j":"й","k":"к",
+"l":"л","m":"м","n":"н","o":"о","p":"п","q":"к","r":"р","s":"с","t":"т","u":"у","v":"в",
+"w":"в","x":"кс","y":"ы","z":"з","ñ":"н"
+};
+
+const CYR = /^[а-яё]$/;
+const LAT_BASE = /^[a-z]$/;
+
+function stripDiacritics(ch){
+  const special = {"ß":"ss","œ":"oe","æ":"ae"};
+  if (special[ch]) return special[ch];
+  return ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/* fold a single character to the game alphabet of a language */
+function foldChar(ch, lang){
+  if (lang === "ru"){
+    if (CYR.test(ch)) return ch === "ё" ? "е" : ch;
+    return null;
+  }
+  if (lang === "es" && ch === "ñ") return "ñ";
+  const s = stripDiacritics(ch);
+  let out = "";
+  for (const c of s){ if (LAT_BASE.test(c)) out += c; }
+  return out || null;
+}
+
+/* Dictionaries. Keep words lowercase; accents allowed (folded for matching). */
+const DICT_EN = [
+["love","любовь"],["life","жизнь"],["dream","сон, мечта"],["mother","мать"],["father","отец"],
+["child","ребёнок"],["rose","роза"],["flower","цветок"],["moon","луна"],["sun","солнце"],
+["sea","море"],["sky","небо"],["earth","земля"],["water","вода"],["fire","огонь"],
+["air","воздух"],["wind","ветер"],["night","ночь"],["day","день"],["evening","вечер"],
+["morning","утро"],["hour","час"],["time","время"],["world","мир"],["house","дом"],
+["home","дом, очаг"],["door","дверь"],["road","дорога"],["street","улица"],["city","город"],
+["field","поле"],["mountain","гора"],["river","река"],["stone","камень"],["tree","дерево"],
+["leaf","лист"],["branch","ветка"],["root","корень"],["seed","семя"],["bread","хлеб"],
+["wine","вино"],["honey","мёд"],["salt","соль"],["heart","сердце"],["soul","душа"],
+["hand","рука"],["eye","глаз"],["voice","голос"],["gaze","взгляд"],["smile","улыбка"],
+["laugh","смех"],["kiss","поцелуй"],["tear","слеза"],["pain","боль"],["fear","страх"],
+["desire","желание"],["hope","надежда"],["joy","радость"],["sorrow","печаль"],
+["peace","мир, покой"],["war","война"],["truth","правда"],["lie","ложь"],
+["secret","секрет"],["mystery","тайна"],["shadow","тень"],["light","свет"],
+["star","звезда"],["cloud","облако"],["rain","дождь"],["snow","снег"],["cold","холод"],
+["heat","жара"],["spring","весна"],["summer","лето"],["autumn","осень"],["winter","зима"],
+["bird","птица"],["dove","голубь"],["cat","кот"],["dog","собака"],["horse","лошадь"],
+["fish","рыба"],["bee","пчела"],["friend","друг"],["people","люди"],["man","человек, мужчина"],
+["woman","женщина"],["son","сын"],["daughter","дочь"],["brother","брат"],["sister","сестра"],
+["name","имя"],["word","слово"],["song","песня"],["music","музыка"],["poem","стихотворение"],
+["poet","поэт"],["verse","стих, строка"],["tale","сказка"],["story","история"],
+["book","книга"],["letter","письмо"],["paper","бумага"],["game","игра"],["goal","гол; цель"],
+["cry","крик; плач"],["feast","праздник"],["dance","танец"],["art","искусство"],
+["colour","цвет"],["gold","золото"],["silver","серебро"],["money","деньги"],
+["king","король"],["queen","королева"],["saint","святой"],["god","бог"],["angel","ангел"],
+["cross","крест"],["church","церковь"],["school","школа"],["teacher","учитель"],
+["work","работа"],["rest","отдых"],["silence","тишина"],["noise","шум"],["memory","память"],
+["fate","судьба"],["luck","удача"],["reason","разум, причина"],["mind","ум"],["body","тело"],
+["blood","кровь"],["skin","кожа"],["face","лицо"],["hair","волосы"],["finger","палец"],
+["foot","стопа"],["mirror","зеркало"],["window","окно"],["table","стол"],["chair","стул"],
+["bed","кровать"],["key","ключ"],["clock","часы"],["ship","корабль"],["train","поезд"],
+["journey","путешествие"],["bridge","мост"],["island","остров"],["beach","пляж"],
+["sand","песок"],["wave","волна"],["coast","берег"],["north","север"],["south","юг"],
+["east","восток"],["west","запад"],["nothing","ничто"],["everything","всё"],
+["good","хороший"],["bad","плохой"],["new","новый"],["old","старый"],["young","молодой"],
+["great","великий"],["sweet","сладкий, нежный"],["bitter","горький"],["clear","ясный"],
+["dark","тёмный"],["free","свободный"],["alone","одинокий"],["together","вместе"],
+["far","далеко"],["near","близко"],["always","всегда"],["never","никогда"],["now","сейчас"],
+["early","рано"],["late","поздно"],["beautiful","красивый"],["happy","счастливый"],
+["sad","грустный"],["sleep","спать"],["sing","петь"],["weep","плакать"],["live","жить"],
+["die","умирать"],["grow","расти"],["walk","идти"],["run","бежать"],["fly","летать"],
+["fall","падать"],["look","смотреть"],["see","видеть"],["hear","слышать"],
+["speak","говорить"],["wait","ждать"],["seek","искать"],["find","находить"],
+["lose","терять"],["win","побеждать"],["give","давать"],["take","брать"],
+["open","открывать"],["close","закрывать"],["know","знать"],["eat","есть"],["drink","пить"]
+];
+
+const DICT_RU = [
+["любовь","love"],["жизнь","life"],["сон","sleep, dream"],["мечта","dream"],["мать","mother"],
+["мама","mom"],["отец","father"],["дитя","child"],["роза","rose"],["цветок","flower"],
+["луна","moon"],["солнце","sun"],["море","sea"],["небо","sky"],["земля","earth"],
+["вода","water"],["огонь","fire"],["ветер","wind"],["ночь","night"],["день","day"],
+["вечер","evening"],["утро","morning"],["час","hour"],["время","time"],["мир","world; peace"],
+["дом","house"],["дверь","door"],["путь","way"],["дорога","road"],["улица","street"],
+["город","city"],["поле","field"],["гора","mountain"],["река","river"],["камень","stone"],
+["дерево","tree"],["лист","leaf"],["ветка","branch"],["корень","root"],["семя","seed"],
+["хлеб","bread"],["мёд","honey"],["соль","salt"],["сердце","heart"],["душа","soul"],
+["рука","hand"],["глаз","eye"],["глаза","eyes"],["голос","voice"],["взгляд","gaze"],
+["взор","gaze"],["улыбка","smile"],["смех","laughter"],["слеза","tear"],["боль","pain"],
+["печаль","sorrow"],["страх","fear"],["тревога","anxiety"],["желание","desire"],
+["надежда","hope"],["радость","joy"],["грусть","sadness"],["покой","peace, calm"],
+["война","war"],["правда","truth"],["ложь","lie"],["тайна","mystery"],["секрет","secret"],
+["тень","shadow"],["свет","light"],["звезда","star"],["облако","cloud"],["дождь","rain"],
+["снег","snow"],["холод","cold"],["тепло","warmth"],["весна","spring"],["лето","summer"],
+["осень","autumn"],["зима","winter"],["птица","bird"],["голубь","dove"],["рыба","fish"],
+["друг","friend"],["люди","people"],["народ","people, folk"],["человек","person"],
+["сын","son"],["дочь","daughter"],["брат","brother"],["сестра","sister"],["имя","name"],
+["слово","word"],["песня","song"],["музыка","music"],["стих","verse"],["поэт","poet"],
+["сказка","tale"],["история","story"],["книга","book"],["письмо","letter"],["игра","game"],
+["крик","cry"],["праздник","feast"],["танец","dance"],["цвет","colour"],["золото","gold"],
+["серебро","silver"],["память","memory"],["судьба","fate"],["удача","luck"],
+["разум","reason"],["тело","body"],["кровь","blood"],["лицо","face"],["зеркало","mirror"],
+["окно","window"],["стол","table"],["ключ","key"],["корабль","ship"],["поезд","train"],
+["мост","bridge"],["остров","island"],["берег","shore"],["волна","wave"],["песок","sand"],
+["родина","homeland"],["ничто","nothing"],["всё","everything"],["добро","good"],
+["зло","evil"],["свобода","freedom"],["тишина","silence"],["сила","strength"],
+["вера","faith"],["след","trace"],["дым","smoke"],["лес","forest"],["трава","grass"],
+["роса","dew"],["заря","dawn"],["туман","fog"],["гроза","storm"],["эхо","echo"],
+["даль","distance"],["высота","height"],["глубина","depth"],["начало","beginning"],
+["конец","end"],["век","century"],["миг","moment"],["год","year"],["сад","garden"],
+["плод","fruit"],["крыло","wing"],["перо","feather"],["струна","string"]
+];
+
+const DICT_ES = [
+["amor","love / любовь"],["vida","life / жизнь"],["sueño","dream, sleep / сон, мечта"],
+["madre","mother / мать"],["padre","father / отец"],["niño","child / ребёнок"],
+["rosa","rose / роза"],["flor","flower / цветок"],["luna","moon / луна"],
+["sol","sun / солнце"],["mar","sea / море"],["cielo","sky / небо"],
+["tierra","earth / земля"],["agua","water / вода"],["fuego","fire / огонь"],
+["aire","air / воздух"],["viento","wind / ветер"],["noche","night / ночь"],
+["día","day / день"],["tarde","evening; late / вечер; поздно"],
+["mañana","morning; tomorrow / утро; завтра"],["hora","hour / час"],
+["tiempo","time / время"],["mundo","world / мир"],["casa","house / дом"],
+["puerta","door / дверь"],["camino","way, road / путь"],["calle","street / улица"],
+["ciudad","city / город"],["campo","field / поле"],["monte","mountain / гора"],
+["río","river / река"],["piedra","stone / камень"],["árbol","tree / дерево"],
+["hoja","leaf / лист"],["raíz","root / корень"],["pan","bread / хлеб"],
+["vino","wine / вино"],["miel","honey / мёд"],["sal","salt / соль"],
+["corazón","heart / сердце"],["alma","soul / душа"],["mano","hand / рука"],
+["ojo","eye / глаз"],["voz","voice / голос"],["mirada","gaze / взгляд"],
+["sonrisa","smile / улыбка"],["risa","laughter / смех"],["beso","kiss / поцелуй"],
+["abrazo","hug / объятие"],["lágrima","tear / слеза"],["dolor","pain / боль"],
+["pena","sorrow / печаль"],["miedo","fear / страх"],["deseo","desire / желание"],
+["esperanza","hope / надежда"],["alegría","joy / радость"],
+["tristeza","sadness / грусть"],["paz","peace / мир, покой"],["guerra","war / война"],
+["verdad","truth / правда"],["mentira","lie / ложь"],["secreto","secret / секрет"],
+["misterio","mystery / тайна"],["sombra","shadow / тень"],["luz","light / свет"],
+["estrella","star / звезда"],["nube","cloud / облако"],["lluvia","rain / дождь"],
+["nieve","snow / снег"],["frío","cold / холод"],["calor","heat / жара"],
+["primavera","spring / весна"],["verano","summer / лето"],["otoño","autumn / осень"],
+["invierno","winter / зима"],["pájaro","bird / птица"],["paloma","dove / голубь"],
+["gato","cat / кот"],["perro","dog / собака"],["caballo","horse / лошадь"],
+["pez","fish / рыба"],["abeja","bee / пчела"],["mariposa","butterfly / бабочка"],
+["amigo","friend / друг"],["gente","people / люди"],["hombre","man / мужчина"],
+["mujer","woman / женщина"],["hijo","son / сын"],["hija","daughter / дочь"],
+["hermano","brother / брат"],["hermana","sister / сестра"],["nombre","name / имя"],
+["palabra","word / слово"],["canción","song / песня"],["música","music / музыка"],
+["poema","poem / стихотворение"],["poeta","poet / поэт"],["verso","verse / стих"],
+["cuento","tale / сказка"],["historia","story / история"],["libro","book / книга"],
+["carta","letter / письмо"],["papel","paper / бумага"],["juego","game / игра"],
+["gol","goal / гол"],["grito","cry / крик"],["fiesta","feast / праздник"],
+["baile","dance / танец"],["arte","art / искусство"],["color","colour / цвет"],
+["oro","gold / золото"],["plata","silver / серебро"],["dinero","money / деньги"],
+["rey","king / король"],["reina","queen / королева"],["santo","saint / святой"],
+["dios","god / бог"],["ángel","angel / ангел"],["cruz","cross / крест"],
+["iglesia","church / церковь"],["escuela","school / школа"],
+["maestro","teacher / учитель"],["trabajo","work / работа"],
+["descanso","rest / отдых"],["silencio","silence / тишина"],["ruido","noise / шум"],
+["olvido","oblivion / забвение"],["memoria","memory / память"],
+["recuerdo","remembrance / воспоминание"],["destino","fate / судьба"],
+["suerte","luck / удача"],["razón","reason / разум"],["locura","madness / безумие"],
+["mente","mind / ум"],["cuerpo","body / тело"],["sangre","blood / кровь"],
+["piel","skin / кожа"],["cara","face / лицо"],["pelo","hair / волосы"],
+["espejo","mirror / зеркало"],["ventana","window / окно"],["mesa","table / стол"],
+["silla","chair / стул"],["cama","bed / кровать"],["llave","key / ключ"],
+["reloj","clock / часы"],["barco","ship / корабль"],["tren","train / поезд"],
+["viaje","journey / путешествие"],["puente","bridge / мост"],["isla","island / остров"],
+["playa","beach / пляж"],["arena","sand / песок"],["ola","wave / волна"],
+["costa","coast / берег"],["norte","north / север"],["sur","south / юг"],
+["este","east / восток"],["oeste","west / запад"],["patria","homeland / родина"],
+["pueblo","people; village / народ; деревня"],["nada","nothing / ничто"],
+["todo","everything / всё"],["bueno","good / хороший"],["malo","bad / плохой"],
+["nuevo","new / новый"],["viejo","old / старый"],["joven","young / молодой"],
+["grande","great / большой"],["dulce","sweet / сладкий"],["amargo","bitter / горький"],
+["claro","clear / ясный"],["oscuro","dark / тёмный"],["libre","free / свободный"],
+["solo","alone / одинокий"],["junto","together / вместе"],["lejos","far / далеко"],
+["cerca","near / близко"],["siempre","always / всегда"],["nunca","never / никогда"],
+["ahora","now / сейчас"],["temprano","early / рано"],["bonito","pretty / красивый"],
+["bello","beautiful / прекрасный"],["feliz","happy / счастливый"],
+["triste","sad / грустный"],["dormir","to sleep / спать"],
+["soñar","to dream / мечтать"],["cantar","to sing / петь"],
+["bailar","to dance / танцевать"],["reír","to laugh / смеяться"],
+["llorar","to weep / плакать"],["amar","to love / любить"],
+["querer","to want, love / хотеть, любить"],["vivir","to live / жить"],
+["morir","to die / умирать"],["nacer","to be born / рождаться"],
+["crecer","to grow / расти"],["andar","to walk / идти"],["correr","to run / бежать"],
+["volar","to fly / летать"],["caer","to fall / падать"],["mirar","to look / смотреть"],
+["ver","to see / видеть"],["oír","to hear / слышать"],["hablar","to speak / говорить"],
+["callar","to be silent / молчать"],["esperar","to wait, hope / ждать, надеяться"],
+["buscar","to seek / искать"],["encontrar","to find / находить"],
+["perder","to lose / терять"],["ganar","to win / выигрывать"],["dar","to give / давать"],
+["tomar","to take / брать"],["abrir","to open / открывать"],
+["cerrar","to close / закрывать"],["salir","to leave / выходить"],
+["volver","to return / возвращаться"],["saber","to know / знать"],
+["poder","to be able / мочь"],["comer","to eat / есть"],["beber","to drink / пить"]
+];
+
+const DICT_FR = [
+["amour","love / любовь"],["vie","life / жизнь"],["rêve","dream / мечта, сон"],
+["mère","mother / мать"],["père","father / отец"],["enfant","child / ребёнок"],
+["rose","rose / роза"],["fleur","flower / цветок"],["lune","moon / луна"],
+["soleil","sun / солнце"],["mer","sea / море"],["ciel","sky / небо"],
+["terre","earth / земля"],["eau","water / вода"],["feu","fire / огонь"],
+["air","air / воздух"],["vent","wind / ветер"],["nuit","night / ночь"],
+["jour","day / день"],["soir","evening / вечер"],["matin","morning / утро"],
+["heure","hour / час"],["temps","time / время"],["monde","world / мир"],
+["maison","house / дом"],["porte","door / дверь"],["chemin","way / путь"],
+["rue","street / улица"],["ville","city / город"],["champ","field / поле"],
+["montagne","mountain / гора"],["pierre","stone / камень"],["arbre","tree / дерево"],
+["feuille","leaf / лист"],["racine","root / корень"],["pain","bread / хлеб"],
+["vin","wine / вино"],["miel","honey / мёд"],["sel","salt / соль"],
+["coeur","heart / сердце"],["âme","soul / душа"],["main","hand / рука"],
+["oeil","eye / глаз"],["voix","voice / голос"],["regard","gaze / взгляд"],
+["sourire","smile / улыбка"],["rire","laughter / смех"],["baiser","kiss / поцелуй"],
+["larme","tear / слеза"],["douleur","pain / боль"],["peur","fear / страх"],
+["désir","desire / желание"],["espoir","hope / надежда"],["joie","joy / радость"],
+["paix","peace / мир, покой"],["guerre","war / война"],["vérité","truth / правда"],
+["mensonge","lie / ложь"],["secret","secret / секрет"],["ombre","shadow / тень"],
+["lumière","light / свет"],["étoile","star / звезда"],["nuage","cloud / облако"],
+["pluie","rain / дождь"],["neige","snow / снег"],["froid","cold / холод"],
+["chaleur","heat / тепло"],["printemps","spring / весна"],["été","summer / лето"],
+["automne","autumn / осень"],["hiver","winter / зима"],["oiseau","bird / птица"],
+["chat","cat / кот"],["chien","dog / собака"],["cheval","horse / лошадь"],
+["poisson","fish / рыба"],["ami","friend / друг"],["gens","people / люди"],
+["homme","man / мужчина"],["femme","woman / женщина"],["fils","son / сын"],
+["fille","daughter / дочь"],["frère","brother / брат"],["soeur","sister / сестра"],
+["nom","name / имя"],["mot","word / слово"],["chanson","song / песня"],
+["musique","music / музыка"],["poème","poem / стихотворение"],["poète","poet / поэт"],
+["conte","tale / сказка"],["histoire","story / история"],["livre","book / книга"],
+["lettre","letter / письмо"],["papier","paper / бумага"],["jeu","game / игра"],
+["fête","feast / праздник"],["danse","dance / танец"],["art","art / искусство"],
+["couleur","colour / цвет"],["or","gold / золото"],["argent","silver; money / серебро; деньги"],
+["roi","king / король"],["reine","queen / королева"],["dieu","god / бог"],
+["ange","angel / ангел"],["mémoire","memory / память"],["destin","fate / судьба"],
+["chance","luck / удача"],["raison","reason / разум"],["corps","body / тело"],
+["sang","blood / кровь"],["visage","face / лицо"],["miroir","mirror / зеркало"],
+["fenêtre","window / окно"],["table","table / стол"],["clé","key / ключ"],
+["bateau","ship / корабль"],["train","train / поезд"],["voyage","journey / путешествие"],
+["pont","bridge / мост"],["île","island / остров"],["plage","beach / пляж"],
+["sable","sand / песок"],["vague","wave / волна"],["nord","north / север"],
+["sud","south / юг"],["est","east / восток"],["ouest","west / запад"],
+["rien","nothing / ничто"],["tout","everything / всё"],["bon","good / хороший"],
+["mauvais","bad / плохой"],["nouveau","new / новый"],["vieux","old / старый"],
+["jeune","young / молодой"],["grand","great / большой"],["doux","sweet / нежный"],
+["clair","clear / ясный"],["sombre","dark / тёмный"],["libre","free / свободный"],
+["seul","alone / одинокий"],["toujours","always / всегда"],["jamais","never / никогда"],
+["beau","beautiful / красивый"],["heureux","happy / счастливый"],
+["triste","sad / грустный"],["dormir","to sleep / спать"],["chanter","to sing / петь"],
+["danser","to dance / танцевать"],["pleurer","to weep / плакать"],
+["aimer","to love / любить"],["vivre","to live / жить"],["mourir","to die / умирать"],
+["voir","to see / видеть"],["entendre","to hear / слышать"],
+["parler","to speak / говорить"],["attendre","to wait / ждать"],
+["chercher","to seek / искать"],["trouver","to find / находить"],
+["perdre","to lose / терять"],["gagner","to win / выигрывать"],
+["donner","to give / давать"],["prendre","to take / брать"],
+["ouvrir","to open / открывать"],["savoir","to know / знать"]
+];
+
+const DICT_DE = [
+["liebe","love / любовь"],["leben","life / жизнь"],["traum","dream / сон, мечта"],
+["mutter","mother / мать"],["vater","father / отец"],["kind","child / ребёнок"],
+["rose","rose / роза"],["blume","flower / цветок"],["mond","moon / луна"],
+["sonne","sun / солнце"],["meer","sea / море"],["himmel","sky / небо"],
+["erde","earth / земля"],["wasser","water / вода"],["feuer","fire / огонь"],
+["luft","air / воздух"],["wind","wind / ветер"],["nacht","night / ночь"],
+["tag","day / день"],["abend","evening / вечер"],["morgen","morning / утро"],
+["stunde","hour / час"],["zeit","time / время"],["welt","world / мир"],
+["haus","house / дом"],["tür","door / дверь"],["weg","way / путь"],
+["stadt","city / город"],["feld","field / поле"],["berg","mountain / гора"],
+["fluss","river / река"],["stein","stone / камень"],["baum","tree / дерево"],
+["blatt","leaf / лист"],["wurzel","root / корень"],["brot","bread / хлеб"],
+["wein","wine / вино"],["honig","honey / мёд"],["salz","salt / соль"],
+["herz","heart / сердце"],["seele","soul / душа"],["hand","hand / рука"],
+["auge","eye / глаз"],["stimme","voice / голос"],["blick","gaze / взгляд"],
+["lächeln","smile / улыбка"],["kuss","kiss / поцелуй"],["träne","tear / слеза"],
+["schmerz","pain / боль"],["angst","fear / страх"],["wunsch","wish / желание"],
+["hoffnung","hope / надежда"],["freude","joy / радость"],["friede","peace / мир, покой"],
+["krieg","war / война"],["wahrheit","truth / правда"],["lüge","lie / ложь"],
+["geheimnis","secret / тайна"],["schatten","shadow / тень"],["licht","light / свет"],
+["stern","star / звезда"],["wolke","cloud / облако"],["regen","rain / дождь"],
+["schnee","snow / снег"],["kälte","cold / холод"],["wärme","warmth / тепло"],
+["frühling","spring / весна"],["sommer","summer / лето"],["herbst","autumn / осень"],
+["winter","winter / зима"],["vogel","bird / птица"],["katze","cat / кошка"],
+["hund","dog / собака"],["pferd","horse / лошадь"],["fisch","fish / рыба"],
+["freund","friend / друг"],["mensch","person / человек"],["mann","man / мужчина"],
+["frau","woman / женщина"],["sohn","son / сын"],["tochter","daughter / дочь"],
+["bruder","brother / брат"],["schwester","sister / сестра"],["name","name / имя"],
+["wort","word / слово"],["lied","song / песня"],["musik","music / музыка"],
+["gedicht","poem / стихотворение"],["dichter","poet / поэт"],
+["märchen","fairy tale / сказка"],["geschichte","story / история"],
+["buch","book / книга"],["brief","letter / письмо"],["papier","paper / бумага"],
+["spiel","game / игра"],["fest","feast / праздник"],["tanz","dance / танец"],
+["kunst","art / искусство"],["farbe","colour / цвет"],["gold","gold / золото"],
+["silber","silver / серебро"],["könig","king / король"],["königin","queen / королева"],
+["gott","god / бог"],["engel","angel / ангел"],["schicksal","fate / судьба"],
+["glück","luck, happiness / удача, счастье"],["geist","mind, spirit / дух, ум"],
+["körper","body / тело"],["blut","blood / кровь"],["gesicht","face / лицо"],
+["spiegel","mirror / зеркало"],["fenster","window / окно"],["tisch","table / стол"],
+["schlüssel","key / ключ"],["schiff","ship / корабль"],["zug","train / поезд"],
+["reise","journey / путешествие"],["brücke","bridge / мост"],["insel","island / остров"],
+["strand","beach / пляж"],["sand","sand / песок"],["welle","wave / волна"],
+["norden","north / север"],["süden","south / юг"],["osten","east / восток"],
+["westen","west / запад"],["nichts","nothing / ничто"],["alles","everything / всё"],
+["gut","good / хороший"],["neu","new / новый"],["alt","old / старый"],
+["jung","young / молодой"],["groß","great / большой"],["süß","sweet / сладкий"],
+["hell","bright / светлый"],["dunkel","dark / тёмный"],["frei","free / свободный"],
+["allein","alone / одинокий"],["immer","always / всегда"],["nie","never / никогда"],
+["schön","beautiful / красивый"],["glücklich","happy / счастливый"],
+["traurig","sad / грустный"],["schlafen","to sleep / спать"],
+["singen","to sing / петь"],["tanzen","to dance / танцевать"],
+["lachen","to laugh / смеяться"],["weinen","to weep / плакать"],
+["lieben","to love / любить"],["sterben","to die / умирать"],
+["sehen","to see / видеть"],["hören","to hear / слышать"],
+["sprechen","to speak / говорить"],["warten","to wait / ждать"],
+["suchen","to seek / искать"],["finden","to find / находить"],
+["verlieren","to lose / терять"],["geben","to give / давать"],
+["nehmen","to take / брать"],["wissen","to know / знать"]
+];
+
+const DICT_IT = [
+["amore","love / любовь"],["vita","life / жизнь"],["sogno","dream / сон, мечта"],
+["madre","mother / мать"],["padre","father / отец"],["bambino","child / ребёнок"],
+["rosa","rose / роза"],["fiore","flower / цветок"],["luna","moon / луна"],
+["sole","sun / солнце"],["mare","sea / море"],["cielo","sky / небо"],
+["terra","earth / земля"],["acqua","water / вода"],["fuoco","fire / огонь"],
+["aria","air / воздух"],["vento","wind / ветер"],["notte","night / ночь"],
+["giorno","day / день"],["sera","evening / вечер"],["mattina","morning / утро"],
+["ora","hour / час"],["tempo","time / время"],["mondo","world / мир"],
+["casa","house / дом"],["porta","door / дверь"],["strada","road / дорога"],
+["città","city / город"],["campo","field / поле"],["monte","mountain / гора"],
+["fiume","river / река"],["pietra","stone / камень"],["albero","tree / дерево"],
+["foglia","leaf / лист"],["radice","root / корень"],["pane","bread / хлеб"],
+["vino","wine / вино"],["miele","honey / мёд"],["sale","salt / соль"],
+["cuore","heart / сердце"],["anima","soul / душа"],["mano","hand / рука"],
+["occhio","eye / глаз"],["voce","voice / голос"],["sguardo","gaze / взгляд"],
+["sorriso","smile / улыбка"],["riso","laughter / смех"],["bacio","kiss / поцелуй"],
+["lacrima","tear / слеза"],["dolore","pain / боль"],["paura","fear / страх"],
+["desiderio","desire / желание"],["speranza","hope / надежда"],["gioia","joy / радость"],
+["pace","peace / мир, покой"],["guerra","war / война"],["verità","truth / правда"],
+["bugia","lie / ложь"],["segreto","secret / секрет"],["mistero","mystery / тайна"],
+["ombra","shadow / тень"],["luce","light / свет"],["stella","star / звезда"],
+["nuvola","cloud / облако"],["pioggia","rain / дождь"],["neve","snow / снег"],
+["freddo","cold / холод"],["caldo","heat / тепло"],["primavera","spring / весна"],
+["estate","summer / лето"],["autunno","autumn / осень"],["inverno","winter / зима"],
+["uccello","bird / птица"],["gatto","cat / кот"],["cane","dog / собака"],
+["cavallo","horse / лошадь"],["pesce","fish / рыба"],["amico","friend / друг"],
+["gente","people / люди"],["uomo","man / мужчина"],["donna","woman / женщина"],
+["figlio","son / сын"],["figlia","daughter / дочь"],["fratello","brother / брат"],
+["sorella","sister / сестра"],["nome","name / имя"],["parola","word / слово"],
+["canzone","song / песня"],["musica","music / музыка"],["poesia","poem / стихотворение"],
+["poeta","poet / поэт"],["favola","tale / сказка"],["storia","story / история"],
+["libro","book / книга"],["lettera","letter / письмо"],["carta","paper / бумага"],
+["gioco","game / игра"],["festa","feast / праздник"],["danza","dance / танец"],
+["arte","art / искусство"],["colore","colour / цвет"],["oro","gold / золото"],
+["argento","silver / серебро"],["re","king / король"],["regina","queen / королева"],
+["dio","god / бог"],["angelo","angel / ангел"],["memoria","memory / память"],
+["destino","fate / судьба"],["fortuna","luck / удача"],["ragione","reason / разум"],
+["corpo","body / тело"],["sangue","blood / кровь"],["viso","face / лицо"],
+["specchio","mirror / зеркало"],["finestra","window / окно"],["tavolo","table / стол"],
+["chiave","key / ключ"],["nave","ship / корабль"],["treno","train / поезд"],
+["viaggio","journey / путешествие"],["ponte","bridge / мост"],["isola","island / остров"],
+["spiaggia","beach / пляж"],["sabbia","sand / песок"],["onda","wave / волна"],
+["nord","north / север"],["sud","south / юг"],["est","east / восток"],
+["ovest","west / запад"],["niente","nothing / ничто"],["tutto","everything / всё"],
+["buono","good / хороший"],["nuovo","new / новый"],["vecchio","old / старый"],
+["giovane","young / молодой"],["grande","great / большой"],["dolce","sweet / нежный"],
+["chiaro","clear / ясный"],["scuro","dark / тёмный"],["libero","free / свободный"],
+["solo","alone / одинокий"],["sempre","always / всегда"],["mai","never / никогда"],
+["bello","beautiful / красивый"],["felice","happy / счастливый"],
+["triste","sad / грустный"],["dormire","to sleep / спать"],
+["cantare","to sing / петь"],["ballare","to dance / танцевать"],
+["ridere","to laugh / смеяться"],["piangere","to weep / плакать"],
+["amare","to love / любить"],["vivere","to live / жить"],["morire","to die / умирать"],
+["vedere","to see / видеть"],["sentire","to hear, feel / слышать, чувствовать"],
+["parlare","to speak / говорить"],["aspettare","to wait / ждать"],
+["cercare","to seek / искать"],["trovare","to find / находить"],
+["perdere","to lose / терять"],["vincere","to win / побеждать"],
+["dare","to give / давать"],["prendere","to take / брать"],
+["aprire","to open / открывать"],["sapere","to know / знать"]
+];
+
+const DICT_PT = [
+["amor","love / любовь"],["vida","life / жизнь"],["sonho","dream / сон, мечта"],
+["mãe","mother / мать"],["pai","father / отец"],["criança","child / ребёнок"],
+["rosa","rose / роза"],["flor","flower / цветок"],["lua","moon / луна"],
+["sol","sun / солнце"],["mar","sea / море"],["céu","sky / небо"],
+["terra","earth / земля"],["água","water / вода"],["fogo","fire / огонь"],
+["ar","air / воздух"],["vento","wind / ветер"],["noite","night / ночь"],
+["dia","day / день"],["tarde","evening / вечер"],["manhã","morning / утро"],
+["hora","hour / час"],["tempo","time / время"],["mundo","world / мир"],
+["casa","house / дом"],["porta","door / дверь"],["caminho","way / путь"],
+["rua","street / улица"],["cidade","city / город"],["campo","field / поле"],
+["monte","mountain / гора"],["rio","river / река"],["pedra","stone / камень"],
+["árvore","tree / дерево"],["folha","leaf / лист"],["raiz","root / корень"],
+["pão","bread / хлеб"],["vinho","wine / вино"],["mel","honey / мёд"],
+["sal","salt / соль"],["coração","heart / сердце"],["alma","soul / душа"],
+["mão","hand / рука"],["olho","eye / глаз"],["voz","voice / голос"],
+["olhar","gaze / взгляд"],["sorriso","smile / улыбка"],["riso","laughter / смех"],
+["beijo","kiss / поцелуй"],["lágrima","tear / слеза"],["dor","pain / боль"],
+["medo","fear / страх"],["desejo","desire / желание"],["esperança","hope / надежда"],
+["alegria","joy / радость"],["paz","peace / мир, покой"],["guerra","war / война"],
+["verdade","truth / правда"],["mentira","lie / ложь"],["segredo","secret / секрет"],
+["sombra","shadow / тень"],["luz","light / свет"],["estrela","star / звезда"],
+["nuvem","cloud / облако"],["chuva","rain / дождь"],["neve","snow / снег"],
+["frio","cold / холод"],["calor","heat / жара"],["primavera","spring / весна"],
+["verão","summer / лето"],["outono","autumn / осень"],["inverno","winter / зима"],
+["pássaro","bird / птица"],["gato","cat / кот"],["cão","dog / собака"],
+["cavalo","horse / лошадь"],["peixe","fish / рыба"],["amigo","friend / друг"],
+["gente","people / люди"],["homem","man / мужчина"],["mulher","woman / женщина"],
+["filho","son / сын"],["filha","daughter / дочь"],["irmão","brother / брат"],
+["irmã","sister / сестра"],["nome","name / имя"],["palavra","word / слово"],
+["canção","song / песня"],["música","music / музыка"],["poema","poem / стихотворение"],
+["poeta","poet / поэт"],["conto","tale / сказка"],["história","story / история"],
+["livro","book / книга"],["carta","letter / письмо"],["papel","paper / бумага"],
+["jogo","game / игра"],["festa","feast / праздник"],["dança","dance / танец"],
+["arte","art / искусство"],["cor","colour / цвет"],["ouro","gold / золото"],
+["prata","silver / серебро"],["rei","king / король"],["rainha","queen / королева"],
+["deus","god / бог"],["anjo","angel / ангел"],["memória","memory / память"],
+["destino","fate / судьба"],["sorte","luck / удача"],["razão","reason / разум"],
+["corpo","body / тело"],["sangue","blood / кровь"],["rosto","face / лицо"],
+["espelho","mirror / зеркало"],["janela","window / окно"],["mesa","table / стол"],
+["chave","key / ключ"],["navio","ship / корабль"],["trem","train / поезд"],
+["viagem","journey / путешествие"],["ponte","bridge / мост"],["ilha","island / остров"],
+["praia","beach / пляж"],["areia","sand / песок"],["onda","wave / волна"],
+["norte","north / север"],["sul","south / юг"],["leste","east / восток"],
+["oeste","west / запад"],["nada","nothing / ничто"],["tudo","everything / всё"],
+["bom","good / хороший"],["novo","new / новый"],["velho","old / старый"],
+["jovem","young / молодой"],["grande","great / большой"],["doce","sweet / сладкий"],
+["claro","clear / ясный"],["escuro","dark / тёмный"],["livre","free / свободный"],
+["só","alone / одинокий"],["sempre","always / всегда"],["nunca","never / никогда"],
+["belo","beautiful / красивый"],["feliz","happy / счастливый"],
+["triste","sad / грустный"],["dormir","to sleep / спать"],
+["cantar","to sing / петь"],["dançar","to dance / танцевать"],
+["rir","to laugh / смеяться"],["chorar","to weep / плакать"],
+["amar","to love / любить"],["viver","to live / жить"],["morrer","to die / умирать"],
+["ver","to see / видеть"],["ouvir","to hear / слышать"],["falar","to speak / говорить"],
+["esperar","to wait, hope / ждать, надеяться"],["buscar","to seek / искать"],
+["achar","to find / находить"],["perder","to lose / терять"],
+["ganhar","to win / выигрывать"],["dar","to give / давать"],
+["tomar","to take / брать"],["abrir","to open / открывать"],
+["saber","to know / знать"]
+];
+
+/* Proverb templates: [native, gloss]. Gloss is English (Russian for EN). */
+const TEMPLATES = {
+es:[
+  ["Donde hay {A}, hay {B}.","Where there is {a}, there is {b}."],
+  ["Sin {A} no hay {B}.","Without {a} there is no {b}."],
+  ["Quien busca {A}, encuentra {B}.","Who seeks {a} finds {b}."],
+  ["Más vale {A} que {B}.","Better {a} than {b}."],
+  ["De {A} nace {B}.","From {a}, {b} is born."],
+  ["El que siembra {A}, cosecha {B}.","Who sows {a} reaps {b}."],
+  ["No hay {A} sin {B}.","There is no {a} without {b}."]
+],
+en:[
+  ["Where there is {A}, there is {B}.","Где есть {a}, там есть и {b}."],
+  ["No {A} without {B}.","Нет {a} без {b}."],
+  ["Who seeks {A} finds {B}.","Кто ищет {a}, находит {b}."],
+  ["Better {A} than {B}.","Лучше {a}, чем {b}."],
+  ["From {A} comes {B}.","Из {a} рождается {b}."],
+  ["Sow {A}, reap {B}.","Посеешь {a} — пожнёшь {b}."]
+],
+ru:[
+  ["Где {A}, там и {B}.","Where there is {a}, there is {b}."],
+  ["Без {A} нет {B}.","Without {a} there is no {b}."],
+  ["Кто ищет {A}, найдёт {B}.","Who seeks {a} finds {b}."],
+  ["Лучше {A}, чем {B}.","Better {a} than {b}."],
+  ["Из {A} рождается {B}.","From {a}, {b} is born."],
+  ["Посеешь {A} — пожнёшь {B}.","Sow {a}, reap {b}."]
+],
+fr:[
+  ["Où il y a {A}, il y a {B}.","Where there is {a}, there is {b}."],
+  ["Pas de {A} sans {B}.","No {a} without {b}."],
+  ["Qui cherche {A} trouve {B}.","Who seeks {a} finds {b}."],
+  ["Mieux vaut {A} que {B}.","Better {a} than {b}."],
+  ["De {A} naît {B}.","From {a}, {b} is born."]
+],
+de:[
+  ["Wo {A} ist, ist auch {B}.","Where there is {a}, there is {b}."],
+  ["Kein {A} ohne {B}.","No {a} without {b}."],
+  ["Wer {A} sucht, findet {B}.","Who seeks {a} finds {b}."],
+  ["Besser {A} als {B}.","Better {a} than {b}."],
+  ["Aus {A} wird {B}.","From {a} comes {b}."]
+],
+it:[
+  ["Dove c'è {A}, c'è {B}.","Where there is {a}, there is {b}."],
+  ["Non c'è {A} senza {B}.","There is no {a} without {b}."],
+  ["Chi cerca {A} trova {B}.","Who seeks {a} finds {b}."],
+  ["Meglio {A} che {B}.","Better {a} than {b}."],
+  ["Da {A} nasce {B}.","From {a}, {b} is born."]
+],
+pt:[
+  ["Onde há {A}, há {B}.","Where there is {a}, there is {b}."],
+  ["Não há {A} sem {B}.","There is no {a} without {b}."],
+  ["Quem busca {A} acha {B}.","Who seeks {a} finds {b}."],
+  ["Melhor {A} que {B}.","Better {a} than {b}."],
+  ["De {A} nasce {B}.","From {a}, {b} is born."]
+]
+};
+
+const LANGS = {
+  en:{name:"English", dict:DICT_EN},
+  ru:{name:"Русский", dict:DICT_RU},
+  es:{name:"Español", dict:DICT_ES},
+  fr:{name:"Français", dict:DICT_FR},
+  de:{name:"Deutsch", dict:DICT_DE},
+  it:{name:"Italiano", dict:DICT_IT},
+  pt:{name:"Português", dict:DICT_PT}
+};
+
+/* ============================================================
+   2. LETTER LOGIC
+   ============================================================ */
+function extractLetters(text, lang){
+  const counts = new Map();
+  const order = [];
+  const lower = text.toLowerCase();
+  const isRuTarget = lang === "ru";
+  for (const raw of lower){
+    let pieces = [];
+    if (!isRuTarget && CYR.test(raw)){
+      const t = RU2LAT[raw] || "";
+      for (const c of t){
+        const f = foldChar(c, lang);
+        if (f) pieces.push(...f);
+      }
+    } else if (isRuTarget && !CYR.test(raw)){
+      const base = stripDiacritics(raw);
+      for (const c of base){
+        const t = LAT2CYR[c];
+        if (t) pieces.push(...t);
+      }
+    } else {
+      const f = foldChar(raw, lang);
+      if (f) pieces.push(...f);
+    }
+    for (const p of pieces){
+      if (!counts.has(p)){ counts.set(p, 0); order.push(p); }
+      counts.set(p, counts.get(p) + 1);
+    }
+  }
+  order.sort();
+  return {counts, order};
+}
+
+function wordLetters(word, lang){
+  const out = [];
+  for (const raw of word.toLowerCase()){
+    const f = foldChar(raw, lang);
+    if (f) out.push(...f);
+  }
+  return out;
+}
+
+function canBuild(word, counts, lang, strict){
+  const need = wordLetters(word, lang);
+  if (need.length === 0) return false;
+  if (!strict) return need.every(ch => counts.has(ch));
+  const used = new Map();
+  for (const ch of need){
+    const have = counts.get(ch) || 0;
+    const u = (used.get(ch) || 0) + 1;
+    if (u > have) return false;
+    used.set(ch, u);
+  }
+  return true;
+}
+
+/* ============================================================
+   3. STATE & UI
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const state = {
+  ui: "en",
+  poemNo: 1,
+  letters: null,
+  lang: "en",
+  found: [],
+  collection: []   // [{word, tr, poem, lang}]
+};
+
+function t(key){ return (I18N[state.ui] && I18N[state.ui][key]) || I18N.en[key] || key; }
+
+function applyI18n(){
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  $("filter").placeholder = t("filterPh");
+  renderPoemNum();
+  renderChips();
+  if (state.letters) renderWords(); else $("resultsHint").textContent = t("hintStart");
+  document.documentElement.lang = state.ui;
+}
+
+/* Optional persistence (works on GitHub Pages; silently skipped elsewhere). */
+function save(){
+  try {
+    localStorage.setItem("pdp-state", JSON.stringify({
+      no: state.poemNo, items: state.collection, ui: state.ui
+    }));
+  } catch(e){}
+}
+function load(){
+  try {
+    const raw = localStorage.getItem("pdp-state");
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d && Array.isArray(d.items)){
+      state.collection = d.items;
+      state.poemNo = d.no || (d.items.length + 1);
+      if (d.ui && I18N[d.ui]) state.ui = d.ui;
+    }
+  } catch(e){}
+}
+
+function renderPoemNum(){ $("poemNum").textContent = t("inPoem") + " №" + state.poemNo; }
+
+/* Translation policy: show a gloss only when the word language differs
+   from the interface language. Dual glosses ("english / русский") are
+   trimmed to the interface language when possible. */
+function glossFor(tr, wordLang){
+  if (!tr) return "";
+  if (wordLang === state.ui) return "";
+  const parts = tr.split(" / ");
+  if (parts.length === 2){
+    return state.ui === "ru" ? parts[1] : parts[0];
+  }
+  return tr;
+}
+
+function renderRack(){
+  const rack = $("rack");
+  rack.innerHTML = "";
+  if (!state.letters || state.letters.order.length === 0){
+    rack.innerHTML = '<span class="rack-empty">' + t("rackEmpty") + "</span>";
+    return;
+  }
+  for (const ch of state.letters.order){
+    const div = document.createElement("div");
+    div.className = "tile";
+    div.dataset.letter = ch;
+    div.innerHTML = ch + '<span class="cnt">' + state.letters.counts.get(ch) + "</span>";
+    rack.appendChild(div);
+  }
+}
+
+function highlightWord(word){
+  const set = word ? new Set(wordLetters(word, state.lang)) : null;
+  document.querySelectorAll(".tile").forEach(tl => {
+    tl.classList.toggle("lit", !!(set && set.has(tl.dataset.letter)));
+  });
+}
+
+function analyze(){
+  const text = $("poemText").value.trim();
+  if (!text){ $("resultsHint").textContent = t("hintEmptyText"); return; }
+  state.lang = $("lang").value;
+  const strict = $("mode").value === "strict";
+  state.letters = extractLetters(text, state.lang);
+  const dict = LANGS[state.lang].dict;
+  const minLen = parseInt($("minLen").value, 10);
+
+  state.found = dict
+    .filter(([w]) => wordLetters(w, state.lang).length >= minLen)
+    .filter(([w]) => canBuild(w, state.letters.counts, state.lang, strict))
+    .map(([w, tr]) => ({word: w, tr}))
+    .sort((a, b) => b.word.length - a.word.length || a.word.localeCompare(b.word));
+
+  renderRack();
+  renderWords();
+}
+
+function renderWords(){
+  const list = $("words");
+  const q = $("filter").value.trim().toLowerCase();
+  list.innerHTML = "";
+  const inCollection = new Set(state.collection.map(c => c.word + "|" + c.lang));
+  let shown = 0;
+
+  for (const item of state.found){
+    const gloss = glossFor(item.tr, state.lang);
+    if (q && !item.word.includes(q) && !gloss.toLowerCase().includes(q)) continue;
+    shown++;
+    const li = document.createElement("li");
+    const picked = inCollection.has(item.word + "|" + state.lang);
+    li.className = "word-item" + (picked ? " picked" : "");
+    li.innerHTML =
+      '<span class="w">' + item.word + "</span>" +
+      '<span class="tr">' + gloss + "</span>";
+    const btn = document.createElement("button");
+    btn.className = "small";
+    btn.textContent = picked ? t("added") : t("add");
+    btn.disabled = picked;
+    btn.addEventListener("click", () => addToCollection(item));
+    li.appendChild(btn);
+    li.addEventListener("mouseenter", () => highlightWord(item.word));
+    li.addEventListener("mouseleave", () => highlightWord(null));
+    li.addEventListener("focusin", () => highlightWord(item.word));
+    li.addEventListener("focusout", () => highlightWord(null));
+    list.appendChild(li);
+  }
+
+  $("foundCount").textContent = shown;
+  $("resultsHint").textContent = shown
+    ? t("hintAdded")
+    : (state.letters ? t("hintNone") : t("hintStart"));
+}
+
+function addToCollection(item){
+  state.collection.push({word: item.word, tr: item.tr, poem: state.poemNo, lang: state.lang});
+  state.poemNo++;
+  renderPoemNum();
+  save();
+  renderChips();
+  renderWords();
+}
+
+function removeFromCollection(idx){
+  state.collection.splice(idx, 1);
+  save();
+  renderChips();
+  renderWords();
+}
+
+function collectionByLang(){
+  const groups = {};
+  for (const c of state.collection){
+    (groups[c.lang] = groups[c.lang] || []).push(c);
+  }
+  return groups;
+}
+
+function renderChips(){
+  const chips = $("chips");
+  chips.innerHTML = "";
+  if (state.collection.length === 0){
+    chips.innerHTML = '<span class="empty">' + t("collectionEmpty") + "</span>";
+  } else {
+    state.collection.forEach((c, i) => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.innerHTML =
+        '<span class="n">№' + c.poem + "</span><b>" + c.word + "</b>" +
+        '<span class="lg">' + c.lang + "</span>";
+      const x = document.createElement("button");
+      x.setAttribute("aria-label", "Remove " + c.word);
+      x.textContent = "×";
+      x.addEventListener("click", () => removeFromCollection(i));
+      chip.appendChild(x);
+      chips.appendChild(chip);
+    });
+  }
+  const groups = collectionByLang();
+  const okLangs = Object.keys(groups).filter(l => groups[l].length >= 2 && TEMPLATES[l]);
+  $("proverbBtn").disabled = okLangs.length === 0;
+  $("proverbBtn").title = okLangs.length ? "" : t("proverbNeed");
+  $("exportBtn").disabled = state.collection.length === 0;
+}
+
+/* ============================================================
+   4. PROVERB
+   ============================================================ */
+function pickTwo(arr){
+  const i = Math.floor(Math.random() * arr.length);
+  let j = Math.floor(Math.random() * (arr.length - 1));
+  if (j >= i) j++;
+  return [arr[i], arr[j]];
+}
+
+function firstGloss(c){
+  if (!c.tr) return c.word;
+  return c.tr.split("/")[0].split(",")[0].trim();
+}
+
+function fillProverbLangSelect(){
+  const groups = collectionByLang();
+  const okLangs = Object.keys(groups).filter(l => groups[l].length >= 2 && TEMPLATES[l]);
+  const sel = $("proverbLang");
+  sel.innerHTML = "";
+  for (const l of okLangs){
+    const opt = document.createElement("option");
+    opt.value = l;
+    opt.textContent = LANGS[l].name;
+    sel.appendChild(opt);
+  }
+  return okLangs;
+}
+
+function makeProverb(){
+  const lang = $("proverbLang").value;
+  const groups = collectionByLang();
+  const words = groups[lang] || [];
+  if (words.length < 2) return;
+  const [a, b] = pickTwo(words);
+  const tpls = TEMPLATES[lang];
+  const [tpl, glossTpl] = tpls[Math.floor(Math.random() * tpls.length)];
+  const native = tpl.replace("{A}", a.word).replace("{B}", b.word);
+  const gloss = glossTpl.replace("{a}", firstGloss(a)).replace("{b}", firstGloss(b));
+  $("proverbWords").textContent = words.map(c => c.word).join(", ");
+  $("refranBox").innerHTML = "«" + native + "»<small>" + gloss + "</small>";
+}
+
+/* ============================================================
+   5. EXPORT
+   ============================================================ */
+function exportCollection(){
+  const lines = state.collection.map(c => {
+    const gloss = glossFor(c.tr, c.lang);
+    return t("inPoem") + " №" + c.poem + ": " + c.word.toUpperCase() +
+      (gloss ? " — " + gloss : "") + " [" + c.lang + "]";
+  });
+  const blob = new Blob([lines.join("\n")], {type: "text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "hidden-words.txt";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ============================================================
+   6. WIRING
+   ============================================================ */
+$("analyze").addEventListener("click", analyze);
+$("filter").addEventListener("input", renderWords);
+$("minLen").addEventListener("change", () => { if (state.letters) analyze(); });
+$("lang").addEventListener("change", () => { if ($("poemText").value.trim()) analyze(); });
+$("mode").addEventListener("change", () => { if (state.letters) analyze(); });
+$("exportBtn").addEventListener("click", exportCollection);
+$("proverbBtn").addEventListener("click", () => {
+  const ok = fillProverbLangSelect();
+  if (!ok.length) return;
+  makeProverb();
+  $("proverbDialog").showModal();
+});
+$("proverbLang").addEventListener("change", makeProverb);
+$("anotherProverb").addEventListener("click", makeProverb);
+$("closeDialog").addEventListener("click", () => $("proverbDialog").close());
+$("uiLang").addEventListener("change", e => {
+  state.ui = e.target.value;
+  save();
+  applyI18n();
+});
+
+/* Init */
+load();
+$("uiLang").value = state.ui;
+applyI18n();
+</script>
+</body>
+</html>
